@@ -1698,8 +1698,15 @@ void get_turret_subsys_name(ship_weapon *swp, char *outstr)
 			}
 		}
 	} else if(swp->num_tertiary_banks) {
-		//TODO: add tertiary turret code stuff here
-		sprintf(outstr, "%s", NOX("Unknown"));
+		//Modders should use weapon defined turret name see https://wiki.hard-light.net/index.php/Weapons.tbl#.24Turret_Name: for more sepific naming
+		for (int i = 0; i < swp->num_tertiary_banks; ++i) {
+			auto wip = &Weapon_info[swp->tertiary_bank_weapons[i]];
+			if (*(wip->altSubsysName) != '\0') {
+				sprintf(outstr, "%s", wip->altSubsysName);
+				return;
+			}
+		} 
+		sprintf(outstr, "%s", NOX("Tertiary System"));
 	} else {
 		// This should not happen
 		sprintf(outstr, "%s", NOX("Unused"));
