@@ -228,6 +228,8 @@ public:
 	int		primary_bank_capacity[MAX_SHIP_PRIMARY_BANKS];		// capacity of a bank - Goober5000
 	int		secondary_banks[MAX_SHIP_SECONDARY_BANKS];				// default secondary weapons -hoffoss
 	int		secondary_bank_capacity[MAX_SHIP_SECONDARY_BANKS];	// capacity of a bank -hoffoss
+	SCP_vector<int> tertiary_banks;		// default tertiary weapons
+	SCP_vector<int> tertiary_bank_capacity;	
 	int		path_num;								// path index into polymodel .paths array.  -2 if none exists, -1 if not defined
 
 	int		turret_reset_delay;
@@ -838,10 +840,12 @@ public:
 	// of these.  (most ships however, probably won't have approach points).
 	int			n_guns;								// number of primary gun points (not counting turrets)
 	int			n_missiles;							// number of secondary missile points (not counting turrets)
+	int n_tertiaries;									//	number of tertiary points (not counting turrets)
 	int			n_docks;								// number of docking points
 	int			n_thrusters;						// number of thrusters on this ship.
 	w_bank		*gun_banks;							// array of gun banks
 	w_bank		*missile_banks;					// array of missile banks
+	w_bank*		tertiary_banks;
 	dock_bay		*docking_bays;						// array of docking point pairs
 	thruster_bank		*thrusters;							// array of thruster objects -- likely to change in the future
 	ship_bay_t		*ship_bay;							// contains path indexes for ship bay approach/depart paths

@@ -92,7 +92,7 @@ public:
 
 class VirtualPOFOperationAddWeapons : public VirtualPOFOperation {
 	int sourcebank, destbank = -1;
-	bool primary;
+	int bankType;
 	SCP_string appendingPOF;
 public:
 	VirtualPOFOperationAddWeapons();

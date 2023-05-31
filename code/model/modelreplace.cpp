@@ -748,8 +748,10 @@ VirtualPOFOperationAddWeapons::VirtualPOFOperationAddWeapons() {
 	stuff_string(appendingPOF, F_FILESPEC);
 
 	required_string("+Type:");
-	primary = required_string_either("Primary", "Secondary") == 0;
-
+	bankType = required_string_one_of(3,
+				  "Primary",
+				  "Secondary"
+				  "Tertiary") == 0;
 	required_string("+Source Weapon Bank:");
 	stuff_int(&sourcebank);
 
@@ -760,13 +762,13 @@ VirtualPOFOperationAddWeapons::VirtualPOFOperationAddWeapons() {
 void VirtualPOFOperationAddWeapons::process(polymodel* pm, model_read_deferred_tasks& /*deferredTasks*/, model_parse_depth depth, const VirtualPOFDefinition& virtualPof) const {
 	auto appendingPM = virtual_pof_build_cache(appendingPOF, depth);
 
-	w_bank*& banks = primary ? pm->gun_banks : pm->missile_banks;
-	int& n_banks = primary ? pm->n_guns : pm->n_missiles;
+	w_bank*& banks = bankType == 0 ? pm->gun_banks : (bankType == 2 ? pm->tertiary_banks : pm->missile_banks);
+	int& n_banks = bankType == 0 ? pm->n_guns : (bankType == 2 ? pm->n_tertiaries : pm->n_missiles);
 
-	const w_bank* const& banks_src = primary ? appendingPM->pm()->gun_banks : appendingPM->pm()->missile_banks;
-	const int& n_banks_src = primary ? appendingPM->pm()->n_guns : appendingPM->pm()->n_missiles;
+	const w_bank* const& banks_src = bankType == 0 ? appendingPM->pm()->gun_banks :(bankType == 2 ? appendingPM->pm()->tertiary_banks : appendingPM->pm()->missile_banks);
+	const int& n_banks_src = bankType == 0 ? appendingPM->pm()->n_guns : (bankType == 2 ? appendingPM->pm()->n_tertiaries : appendingPM->pm()->n_missiles);
 
-	const int& n_banks_max = primary ? MAX_SHIP_PRIMARY_BANKS : MAX_SHIP_SECONDARY_BANKS;
+	const int& n_banks_max = bankType == 0 ? MAX_SHIP_PRIMARY_BANKS : (bankType == 2 ? -1 :MAX_SHIP_SECONDARY_BANKS);
 	
 	if (sourcebank < 0 || sourcebank >= n_banks_src) {
 		Warning(LOCATION, "Source bank %d on POF %s for virtual POF %s does not exist. Returning original POF", sourcebank, appendingPOF.c_str(), virtualPof.name.c_str());
@@ -777,9 +779,14 @@ void VirtualPOFOperationAddWeapons::process(polymodel* pm, model_read_deferred_t
 
 	if (destbank < 0) {
 		//Add
-		if (n_banks >= n_banks_max) {
-			Warning(LOCATION, "No space for additional destination bank on POF %s for virtual POF %s. Returning original POF", pm->filename, virtualPof.name.c_str());
-			return;
+		if (n_banks_max >= 0) {
+			if (n_banks >= n_banks_max) {
+				Warning(LOCATION,
+					"No space for additional destination bank on POF %s for virtual POF %s. Returning original POF",
+					pm->filename,
+					virtualPof.name.c_str());
+				return;
+			}
 		}
 
 		actual_destbank = reallocate_and_copy_array(banks, n_banks, 1);

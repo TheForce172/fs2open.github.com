@@ -50,6 +50,7 @@ namespace animation {
 		TurretFired,	 // Triggered after a turret has fired -The E
 		PrimaryFired,    // Triggered when a primary weapon has fired.
 		SecondaryFired,  // Triggered when a secondary weapon has fired.
+		TertiaryFired,	//Triggered when a tertiary weapon has fired.
 
 		MaxAnimationTypes
 	};

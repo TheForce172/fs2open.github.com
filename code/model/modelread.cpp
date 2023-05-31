@@ -2272,11 +2272,15 @@ modelread_status read_model_file_no_subsys(polymodel * pm, const char* filename,
 				{
 					pm->n_guns = n_weps;
 					pm->gun_banks = wep_banks;
-				}
-				else
+				} else if (id == ID_MPNT)
 				{
 					pm->n_missiles = n_weps;
 					pm->missile_banks = wep_banks;
+				}
+				else
+				{
+					pm->n_tertiaries = n_weps;
+					pm->tertiary_banks = wep_banks;
 				}
 				break;
 			}
@@ -5962,6 +5966,8 @@ void model_subsystem::reset()
         *it = 0;
     for (auto it = std::begin(secondary_bank_capacity); it != std::end(secondary_bank_capacity); ++it)
         *it = 0;
+	tertiary_banks.clear();
+	tertiary_bank_capacity.clear();
 
     path_num = 0;
 
