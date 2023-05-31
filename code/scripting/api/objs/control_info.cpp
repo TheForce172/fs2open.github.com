@@ -26,6 +26,7 @@ flag_def_list plr_commands[] = {
 	{	"TOGGLE_AUTO_MATCH_TARGET_SPEED",		TOGGLE_AUTO_MATCH_TARGET_SPEED,			0	},
 	{	"FIRE_PRIMARY",							FIRE_PRIMARY,							0	},
 	{	"FIRE_SECONDARY",						FIRE_SECONDARY,							0	},
+	{	"FIRE_TERTIARY",						FIRE_TERTIARY,							0	},
 	{	"CYCLE_NEXT_PRIMARY",					CYCLE_NEXT_PRIMARY,						0	},
 	{	"CYCLE_PREV_PRIMARY",					CYCLE_PREV_PRIMARY,						0	},
 	{	"CYCLE_SECONDARY",						CYCLE_SECONDARY,						0	},
@@ -271,6 +272,26 @@ ADE_VIRTVAR(SecondaryCount, l_Control_Info, "number", "Number of secondary weapo
 	}
 
 	return ade_set_args(L, "i", Player->lua_ci.fire_secondary_count);
+}
+
+ADE_VIRTVAR(TertiaryCount,
+	l_Control_Info,
+	"number",
+	"Number of tertiary weapons that will fire",
+	"number",
+	"Number of weapons to fire, or 0 if handle is invalid")
+{
+	int idx;
+	int new_sec = 0;
+
+	if (!ade_get_args(L, "o|i", l_Control_Info.Get(&idx), &new_sec) || Player == nullptr)
+		return ade_set_error(L, "i", new_sec);
+
+	if (ADE_SETTING_VAR) {
+		Player->lua_ci.fire_tertiary_count = new_sec;
+	}
+
+	return ade_set_args(L, "i", Player->lua_ci.fire_tertiary_count);
 }
 
 ADE_VIRTVAR(CountermeasureCount, l_Control_Info, "number", "Number of countermeasures that will launch", "number", "Number of countermeasures to launch, or 0 if handle is invalid")

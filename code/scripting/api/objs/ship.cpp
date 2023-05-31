@@ -782,6 +782,7 @@ ADE_VIRTVAR(TertiaryBanks, l_Ship, "weaponbanktype", "Array of tertiary weapon b
 		dst->current_tertiary_bank = src->current_tertiary_bank;
 		dst->num_tertiary_banks = src->num_tertiary_banks;
 
+		dst->tertiary_bank_weapons = src->tertiary_bank_weapons;
 		dst->next_tertiary_fire_stamp = src->next_tertiary_fire_stamp;
 		dst->tertiary_bank_ammo = src->tertiary_bank_ammo;
 		dst->tertiary_bank_capacity = src->tertiary_bank_capacity;

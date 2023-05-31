@@ -283,6 +283,14 @@ const std::shared_ptr<Hook<WeaponUsedConditions>> OnSecondaryFired = Hook<Weapon
 		{"Target", "object", "The current target of this ship."},
 	});
 
+const std::shared_ptr<Hook<WeaponUsedConditions>> OnTertiaryFired =
+	Hook<WeaponUsedConditions>::Factory("On Tertiary Fire",
+		"Invoked when a tertiary weapon is fired.",
+		{
+			{"User", "ship", "The ship that has fired the weapon."},
+			{"Target", "object", "The current target of this ship."},
+		});
+
 const std::shared_ptr<Hook<WeaponSelectedConditions>> OnWeaponSelected = Hook<WeaponSelectedConditions>::Factory("On Weapon Selected",
 	"Invoked when a new weapon is selected.",
 	{

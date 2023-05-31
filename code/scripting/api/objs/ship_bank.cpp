@@ -230,13 +230,16 @@ ADE_VIRTVAR(WeaponClass, l_WeaponBank, "weaponclass", "Class of weapon mounted i
 			return ade_set_args(L, "o", l_Weaponclass.Set(bh->sw->secondary_bank_weapons[bh->bank]));
 		case SWH_TERTIARY:
 			if(ADE_SETTING_VAR && weaponclass > -1) {
-				//bh->sw->tertiary_bank_weapons[bh->bank] = weaponclass;
+				bh->sw->tertiary_bank_weapons[bh->bank] = weaponclass;
+				bh->sw->tertiary_bank_start_ammo[bh->bank] =
+					(int)std::lround(bh->sw->tertiary_bank_capacity[bh->bank] / Weapon_info[weaponclass].cargo_size);
 			}
 
-			// return ade_set_args(L, "o", l_Weaponclass.Set(bh->sw->tertiary_bank_weapons[bh->bank]));
+			return ade_set_args(L, "o", l_Weaponclass.Set(bh->sw->tertiary_bank_weapons[bh->bank]));
 			// Error(LOCATION, "Tertiary bank support is still in progress");
 			// WMC: TODO
-			return ADE_RETURN_FALSE;
+			// 27/05/2023 THFORCE172: Implemntation started
+			//return ADE_RETURN_FALSE;
 	}
 
 	return ade_set_error(L, "o", l_Weaponclass.Set(-1));
@@ -268,9 +271,9 @@ ADE_VIRTVAR(AmmoLeft, l_WeaponBank, "number", "Ammo left for the current bank", 
 			return ade_set_args(L, "i", bh->sw->secondary_bank_ammo[bh->bank]);
 		case SWH_TERTIARY:
 			if(ADE_SETTING_VAR && ammo > -1) {
-				bh->sw->tertiary_bank_ammo = ammo;
+				bh->sw->tertiary_bank_ammo[bh->bank] = ammo;
 			}
-			return ade_set_args(L, "i", bh->sw->tertiary_bank_ammo);
+			return ade_set_args(L, "i", bh->sw->tertiary_bank_ammo[bh->bank]);
 	}
 
 	return ade_set_error(L, "i", 0);
@@ -315,10 +318,14 @@ ADE_VIRTVAR(AmmoMax, l_WeaponBank, "number", "Maximum ammo for the current bank<
 		}
 		case SWH_TERTIARY:
 			if(ADE_SETTING_VAR && ammomax > -1) {
-				bh->sw->tertiary_bank_capacity = ammomax;
+				bh->sw->tertiary_bank_capacity[bh->bank] = ammomax;
 			}
 
-			return ade_set_args(L, "i", bh->sw->tertiary_bank_capacity);
+			int weapon_class = bh->sw->tertiary_bank_weapons[bh->bank];
+
+			Assert(bh->objp->type == OBJ_SHIP);
+
+			return ade_set_args(L, "i", get_max_ammo_count_for_tertiary_bank(Ships[bh->objp->instance].ship_info_index, bh->bank, weapon_class));
 	}
 
 	return ade_set_error(L, "i", 0);
@@ -384,9 +391,9 @@ ADE_VIRTVAR(Capacity, l_WeaponBank, "number", "The actual capacity of a weapon b
 			return ade_set_args(L, "i", bh->sw->secondary_bank_capacity[bh->bank]);
 		case SWH_TERTIARY:
 			if(ADE_SETTING_VAR && newCapacity > 0) {
-				bh->sw->tertiary_bank_capacity = newCapacity;
+				bh->sw->tertiary_bank_capacity[bh->bank] = newCapacity;
 			}
-			return ade_set_args(L, "i", bh->sw->tertiary_bank_capacity);
+			return ade_set_args(L, "i", bh->sw->tertiary_bank_capacity[bh->bank]);
 	}
 
 	return ade_set_error(L, "i", -1);
