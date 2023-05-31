@@ -1530,7 +1530,58 @@ int CFred_mission_save::save_common_object_data(object* objp, ship* shipp)
 
 		fout(")");
 	}
+	if (save_format != MissionFormat::RETAIL) {
+		z = 0;
+		j = wp->num_tertiary_banks;
 
+		while (j-- && (j >= 0)) {
+			if (wp->tertiary_bank_weapons[j] != sip->tertiary_bank_weapons[j]) {
+				z = 1;
+			}
+		}
+
+		if (z) {
+			if (optional_string_fred("+Tertiary Banks:", "$Name:", "+Subsystem:")) {
+				parse_comments();
+			} else {
+				fout("\n+Tertiary Banks:");
+			}
+
+			fout(" ( ");
+			for (auto bank : wp->tertiary_bank_weapons) {
+				if (bank != -1) {
+					fout("\"%s\" ", Weapon_info[bank].name);
+				} else {
+					fout("\"\" ");
+				}
+			}
+
+			fout(")");
+		}
+
+		z = 0;
+		j = wp->num_tertiary_banks;
+		while (j-- && (j >= 0)) {
+			if (wp->tertiary_bank_ammo[j] != 100) {
+				z = 1;
+			}
+		}
+
+		if (z) {
+			if (optional_string_fred("+Tbank Ammo:", "$Name:", "+Subsystem:")) {
+				parse_comments();
+			} else {
+				fout("\n+Tbank Ammo:");
+			}
+
+			fout(" ( ");
+			for (auto bank : wp->secondary_bank_ammo) {
+				fout("%d ", bank);
+			}
+
+			fout(")");
+		}
+	}
 	ptr = GET_FIRST(&shipp->subsys_list);
 	Assert(ptr);
 
@@ -4501,6 +4552,59 @@ void CFred_mission_save::save_turret_info(ship_subsys* ptr, int ship)
 		}
 
 		fout(")");
+	}
+
+		if (save_format != MissionFormat::RETAIL) {
+		z = 0;
+		i = wp->num_tertiary_banks;
+
+		while (i-- && (i >= 0)) {
+			if (wp->tertiary_bank_weapons[i] != ptr->system_info->tertiary_banks[i]) {
+				z = 1;
+			}
+		}
+
+		if (z) {
+			if (optional_string_fred("+Tertiary Banks:", "$Name:", "+Subsystem:")) {
+				parse_comments();
+			} else {
+				fout("\n+Tertiary Banks:");
+			}
+
+			fout(" ( ");
+			for (auto bank : wp->tertiary_bank_weapons) {
+				if (bank != -1) {
+					fout("\"%s\" ", Weapon_info[bank].name);
+				} else {
+					fout("\"\" ");
+				}
+			}
+
+			fout(")");
+		}
+
+		z = 0;
+		i = wp->num_tertiary_banks;
+		while (i-- && (i >= 0)) {
+			if (wp->tertiary_bank_ammo[i] != 100) {
+				z = 1;
+			}
+		}
+
+		if (z) {
+			if (optional_string_fred("+Tbank Ammo:", "$Name:", "+Subsystem:")) {
+				parse_comments();
+			} else {
+				fout("\n+Tbank Ammo:");
+			}
+
+			fout(" ( ");
+			for (auto bank : wp->secondary_bank_ammo) {
+				fout("%d ", bank);
+			}
+
+			fout(")");
+		}
 	}
 
 	fso_comment_pop(true);

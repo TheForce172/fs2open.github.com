@@ -1271,6 +1271,14 @@ namespace fso {
 								for (i = 0; i < MAX_SHIP_SECONDARY_BANKS; i++) {
 									wp->secondary_bank_ammo[i] = 100;
 								}
+								j = 0;
+								for (i = 0; i < sip->max_tertiary_banks; i++) {
+									if (sp->tertiary_banks[i] != -1) {
+										wp->tertiary_bank_weapons[j] = sp->tertiary_banks[i];
+										wp->tertiary_bank_capacity[j++] = sp->tertiary_bank_capacity[i];
+									}
+								}
+								wp->num_tertiary_banks = j;
 							}
 
 							index++;

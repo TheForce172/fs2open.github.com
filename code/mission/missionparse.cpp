@@ -320,6 +320,8 @@ flag_def_list_new<Mission::Parse_Object_Flags> Parse_object_flags[] = {
     { "ai-attackable-if-no-collide",		Mission::Parse_Object_Flags::OF_Attackable_if_no_collide, true, false },
     { "fail-sound-locked-primary",			Mission::Parse_Object_Flags::SF_Fail_sound_locked_primary, true, false },
     { "fail-sound-locked-secondary",		Mission::Parse_Object_Flags::SF_Fail_sound_locked_secondary, true, false },
+	{"fail-sound-locked-tertiary", 
+		Mission::Parse_Object_Flags::SF_Fail_sound_locked_tertiary, true, false},
     { "aspect-immune",						Mission::Parse_Object_Flags::SF_Aspect_immune, true, false },
 	{ "cannot-perform-scan",			Mission::Parse_Object_Flags::SF_Cannot_perform_scan,	true, false },
 	{ "no-targeting-limits",				Mission::Parse_Object_Flags::SF_No_targeting_limits, true, false},
@@ -362,6 +364,7 @@ parse_object_flag_description<Mission::Parse_Object_Flags> Parse_object_flag_des
     { Mission::Parse_Object_Flags::SF_No_builtin_messages,			"Ship will not send built-in messages."},
     { Mission::Parse_Object_Flags::SF_Primaries_locked,				"Will stop a ship from firing their primary weapons."},
     { Mission::Parse_Object_Flags::SF_Secondaries_locked,			"Will stop a ship from firing their secondary weapons."},
+	{Mission::Parse_Object_Flags::SF_Tertiaries_locked, "Will stop a ship from firing their Tertiary weapons."},
     { Mission::Parse_Object_Flags::SF_No_death_scream,				"Ship will not send a death message."},
     { Mission::Parse_Object_Flags::SF_Always_death_scream,			"Ship will always send a death message."},
     { Mission::Parse_Object_Flags::SF_Nav_needslink,				"This ship requires \"linking\" for autopilot ."},
@@ -2324,6 +2327,51 @@ int parse_create_object_sub(p_object *p_objp, bool standalone_ship)
 				wp->secondary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[wp->secondary_bank_weapons[j]].cargo_size);
 			}
 		}
+		//Tertiary banks
+		if (sssp->tertiary_banks[0] != SUBSYS_STATUS_NO_CHANGE) {
+			for (j = k = 0; j < sip->max_tertiary_banks; ++j) {
+				// skip over any empty tertiary banks unless we are in FRED
+				if ((sssp->tertiary_banks[j] >= 0) || Fred_running) {
+					wp->tertiary_bank_weapons[k] = sssp->tertiary_banks[j];
+					++k;
+				}
+			}
+
+			if (Fred_running) {
+				// only do this for the Pilot subsystem
+				if (!ptr)
+					wp->num_tertiary_banks = sip->num_tertiary_banks;
+			} else
+				wp->num_tertiary_banks = k;
+		}
+
+		for (j = 0; j < wp->num_tertiary_banks; ++j) {
+			if (Fred_running) {
+				wp->tertiary_bank_ammo[j] = sssp->tertiary_ammo[j];
+			} else if (wp->tertiary_bank_weapons[j] >= 0) {
+				if (Weapon_info[wp->tertiary_bank_weapons[j]].wi_flags[Weapon::Info_Flags::TertiaryNoAmmo]) {
+					wp->tertiary_bank_ammo[j] = 0;
+					continue;
+				}
+				Assertion(Weapon_info[wp->tertiary_bank_weapons[j]].cargo_size > 0.0f,
+					"Tertiary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
+					shipp->ship_name,
+					sssp->name,
+					j,
+					Weapon_info[wp->tertiary_bank_weapons[j]].name);
+				// Pilot subsystem ammo depends on ship ammo capacity
+				// in contrast non pilot subsystems depend on the bank capacity of the subsystem
+				int ammo_cap;
+				if (!ptr) {
+					ammo_cap = sip->tertiary_bank_ammo_capacity[j];
+				} else {
+					ammo_cap = wp->tertiary_bank_capacity[j];
+				}
+				int capacity = (int)std::lround(sssp->tertiary_ammo[j] / 100.0f * ammo_cap);
+				wp->tertiary_bank_ammo[j] =
+					(int)std::lround(capacity / Weapon_info[wp->tertiary_bank_weapons[j]].cargo_size);
+			}
+		}
 
 		// if we are parsing a Pilot subsystem, skip the rest
 		if (!ptr)
@@ -2707,6 +2755,9 @@ void resolve_parse_flags(object *objp, flagset<Mission::Parse_Object_Flags> &par
     if (parse_flags[Mission::Parse_Object_Flags::SF_Secondaries_locked])
         shipp->flags.set(Ship::Ship_Flags::Secondaries_locked);
 
+	if (parse_flags[Mission::Parse_Object_Flags::SF_Tertiaries_locked])
+		shipp->flags.set(Ship::Ship_Flags::Tertiaries_locked);
+
     if (parse_flags[Mission::Parse_Object_Flags::SF_Set_class_dynamically])
         shipp->flags.set(Ship::Ship_Flags::Set_class_dynamically);
 
@@ -2784,6 +2835,9 @@ void resolve_parse_flags(object *objp, flagset<Mission::Parse_Object_Flags> &par
 
 	if (parse_flags[Mission::Parse_Object_Flags::SF_Fail_sound_locked_secondary])
 		shipp->flags.set(Ship::Ship_Flags::Fail_sound_locked_secondary);
+
+	if (parse_flags[Mission::Parse_Object_Flags::SF_Fail_sound_locked_tertiary])
+		shipp->flags.set(Ship::Ship_Flags::Fail_sound_locked_tertiary);
 
 	if (parse_flags[Mission::Parse_Object_Flags::SF_Aspect_immune])
 		shipp->flags.set(Ship::Ship_Flags::Aspect_immune);
@@ -3693,6 +3747,13 @@ void parse_common_object_data(p_object *p_objp)
 
 		if (optional_string("+Sbank Ammo:"))
 			stuff_int_list(Subsys_status[i].secondary_ammo, MAX_SHIP_SECONDARY_BANKS, RAW_INTEGER_TYPE);
+
+		if (optional_string("+Tertiary Banks:")) {
+			stuff_int_list(Subsys_status[i].tertiary_banks, sip->max_tertiary_banks, WEAPON_LIST_TYPE);
+		}
+
+		if (optional_string("+Tbank Ammo:"))
+			stuff_int_list(Subsys_status[i].tertiary_ammo, sip->max_tertiary_banks, RAW_INTEGER_TYPE);
 	}
 }
 
@@ -3982,6 +4043,26 @@ void swap_parse_object(p_object *p_obj, int new_ship_class)
 		else
 		{
 			ship_subsystems->secondary_banks[j] = -1;
+		}
+	}
+
+	// Tertiary weapons
+	// Again we first have to find out how many we should have
+	int num_tbanks = new_ship_info->num_tertiary_banks;
+	int max_t = std::max(old_ship_info->max_tertiary_banks, new_ship_info->max_tertiary_banks);
+	// Now cycle through the Tertiary banks looking for banks that were added or removed
+	for (int j = 0; j < max_t; j++) {
+		// If we're dealing with a Tertiary bank that actually should exist on this ship
+		if (j < num_tbanks) {
+			// We only care if a weapon hasn't been parsed in for this bank
+			if (j > old_ship_info->max_tertiary_banks) {
+				// Give the ship the default weapon for this bank.
+				ship_subsystems->tertiary_banks.push_back(new_ship_info->tertiary_bank_weapons[j]);
+			}
+		}
+		// Any Tertiary banks the ship doesn't have should be set to -1
+		else {
+			ship_subsystems->tertiary_banks[j] = -1;
 		}
 	}
 }
@@ -6352,6 +6433,9 @@ bool post_process_mission(mission *pm)
 		if ( swp->num_secondary_banks > 0 ) {
 			swp->current_secondary_bank = 0;			// currently selected secondary bank
 		}
+		if (swp->num_tertiary_banks > 0) {
+			swp->current_tertiary_bank = 0; // currently selected secondary bank
+		}
 	}
 
 	ets_init_ship(Player_obj);	// init ETS data for the player
@@ -7988,7 +8072,8 @@ int allocate_subsys_status()
 	Verify( Subsys_status != NULL );
 
 	// the memset is redundant to the below assignments
-	//memset( &Subsys_status[Subsys_index], 0, sizeof(subsys_status) );
+	//28/05/2023 Added back in to prevent crash on vector push_back
+	memset( &Subsys_status[Subsys_index], 0, sizeof(subsys_status) );
 
 	Subsys_status[Subsys_index].name[0] = '\0';
 
@@ -8012,6 +8097,23 @@ int allocate_subsys_status()
 		Subsys_status[Subsys_index].secondary_ammo[i] = 100;
 	}
 
+	if (!Subsys_status[Subsys_index].tertiary_banks.empty()) {
+		Subsys_status[Subsys_index].tertiary_banks[0] = SUBSYS_STATUS_NO_CHANGE;
+		Subsys_status[Subsys_index].tertiary_ammo[0] = 100;
+	}
+	else {
+		Subsys_status[Subsys_index].tertiary_banks.push_back(SUBSYS_STATUS_NO_CHANGE);
+		Subsys_status[Subsys_index].tertiary_ammo.push_back(100);
+	}
+
+	for (auto bank : Subsys_status[Subsys_index].tertiary_banks) {
+		bank = -1;
+	}
+	for (auto ammo : Subsys_status[Subsys_index].tertiary_ammo) {
+		ammo = 100;
+	}
+
+
 	Subsys_status[Subsys_index].ai_class = SUBSYS_STATUS_NO_CHANGE;
 
 	Subsys_status[Subsys_index].subsys_cargo_name = 0;	// "Nothing"
@@ -8032,20 +8134,19 @@ int insert_subsys_status(p_object *pobjp)
 	if (new_index != pobjp->subsys_index + pobjp->subsys_count)
 	{
 		// copy the new blank entry for future reference
-		subsys_status temp_entry;
-		memcpy(&temp_entry, &Subsys_status[new_index], sizeof(subsys_status));
+		subsys_status temp_entry = Subsys_status[new_index];
 
 		// shift elements upward
 		for (i = Subsys_index - 1; i > (pobjp->subsys_index + pobjp->subsys_count); i--)
 		{
-			memcpy(&Subsys_status[i], &Subsys_status[i-1], sizeof(subsys_status));
+			Subsys_status[i] = Subsys_status[i - 1];
 		}
 
 		// correct the index so that the new subsystem belongs to the proper p_object
 		new_index = pobjp->subsys_index + pobjp->subsys_count;
 
 		// put the blank entry in the p_object
-		memcpy(&Subsys_status[new_index], &temp_entry, sizeof(subsys_status));
+		Subsys_status[new_index] = temp_entry;
 	}
 
 	// make the p_object aware of its new subsystem

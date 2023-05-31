@@ -274,6 +274,8 @@ typedef struct subsys_status {
 	int primary_ammo[MAX_SHIP_PRIMARY_BANKS];
 	int	secondary_banks[MAX_SHIP_SECONDARY_BANKS];
 	int	secondary_ammo[MAX_SHIP_SECONDARY_BANKS];
+	SCP_vector<int> tertiary_banks;
+	SCP_vector<int> tertiary_ammo;
 	int	ai_class;
 	int	subsys_cargo_name;
 } subsys_status;
