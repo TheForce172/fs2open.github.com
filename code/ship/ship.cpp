@@ -1067,6 +1067,9 @@ void ship_info::clone(const ship_info& other)
 	memcpy(secondary_bank_weapons, other.secondary_bank_weapons, sizeof(int) * MAX_SHIP_SECONDARY_BANKS);
 	memcpy(secondary_bank_ammo_capacity, other.secondary_bank_ammo_capacity, sizeof(int) * MAX_SHIP_SECONDARY_BANKS);
 
+	num_tertiary_banks = other.num_tertiary_banks;
+	tertiary_bank_weapons = other.tertiary_bank_weapons;
+
 	memcpy(draw_primary_models, other.draw_primary_models, sizeof(bool) * MAX_SHIP_PRIMARY_BANKS);
 	memcpy(draw_secondary_models, other.draw_secondary_models, sizeof(bool) * MAX_SHIP_SECONDARY_BANKS);
 	weapon_model_draw_distance = other.weapon_model_draw_distance;
@@ -1400,6 +1403,10 @@ void ship_info::move(ship_info&& other)
 	num_secondary_banks = other.num_secondary_banks;
 	std::swap(secondary_bank_weapons, other.secondary_bank_weapons);
 	std::swap(secondary_bank_ammo_capacity, other.secondary_bank_ammo_capacity);
+
+	num_tertiary_banks = other.num_tertiary_banks;
+	std::swap(tertiary_bank_weapons, other.tertiary_bank_weapons);
+	std::swap(tertiary_bank_ammo_capacity, other.tertiary_bank_ammo_capacity);
 
 	std::swap(draw_primary_models, other.draw_primary_models);
 	std::swap(draw_secondary_models, other.draw_secondary_models);
@@ -1833,6 +1840,10 @@ ship_info::ship_info()
 		draw_secondary_models[i] = false;
 		secondary_bank_ammo_capacity[i] = 0;
 	}
+
+	num_tertiary_banks = 0;
+	tertiary_bank_weapons.clear();
+	tertiary_bank_ammo_capacity.clear();
 
 	weapon_model_draw_distance = 200.0f;
 
@@ -2475,16 +2486,20 @@ static void parse_ship_particle_effect(ship_info* sip, particle_effect* pe, cons
 	}
 }
 
-static void parse_allowed_weapons(ship_info *sip, const bool is_primary, const bool is_dogfight, const bool first_time)
+static void parse_allowed_weapons(ship_info* sip,
+	const bool is_primary,
+	const bool is_dogfight,
+	const bool first_time,
+	const bool isTertiary)
 {
 	int i, num_allowed;
 	int allowed_weapons[MAX_WEAPON_TYPES];
-	const int max_banks = (is_primary ? MAX_SHIP_PRIMARY_BANKS : MAX_SHIP_SECONDARY_BANKS);
+	const int max_banks = (is_primary ? MAX_SHIP_PRIMARY_BANKS : (isTertiary ? sip->max_tertiary_banks : MAX_SHIP_SECONDARY_BANKS));
 	const ubyte weapon_type = (is_dogfight ? DOGFIGHT_WEAPON : REGULAR_WEAPON);
-	const int offset = (is_primary ? 0 : MAX_SHIP_PRIMARY_BANKS);
+	const int offset = (is_primary ? 0 : (isTertiary ? MAX_SHIP_PRIMARY_BANKS + MAX_SHIP_SECONDARY_BANKS : MAX_SHIP_PRIMARY_BANKS));
 	const char *allowed_banks_str = is_primary ? (is_dogfight ? "$Allowed Dogfight PBanks:" : "$Allowed PBanks:")
-		: (is_dogfight ? "$Allowed Dogfight SBanks:" : "$Allowed SBanks:");
-	const char *bank_type_str = is_primary ? "primary" : "secondary";
+		: (isTertiary ? "$Allowed TBanks" : (is_dogfight ? "$Allowed Dogfight SBanks:" : "$Allowed SBanks:"));
+	const char *bank_type_str = is_primary ? "primary" : (isTertiary ? "tertiary": "secondary");
 
 	// Goober5000 - fixed Bobboau's implementation of restricted banks
 	int bank;
@@ -2589,6 +2604,43 @@ static void parse_weapon_bank(ship_info *sip, bool is_primary, int *num_banks, i
 		{
 			Warning(LOCATION, "Ship class '%s' has %d secondary banks, but %d secondary capacities... fix this!!", sip->name, *num_banks, num_bank_capacities);
 		}
+	}
+}
+
+//TheForce172 Copied temperaly, could be merged if primarys/secondarys are vectorised.
+static void parse_tertiary_bank(ship_info* sip,
+	int* num_banks,
+	SCP_vector<int>& bank_default_weapons,
+	SCP_vector<int>& bank_capacities)
+{
+	Assert(sip != nullptr);
+	Assert(bank_default_weapons.empty());
+	Assert(bank_capacities.empty());
+	const char* default_banks_str = "$Default TBanks:";
+	const char* bank_capacities_str = "$TBank Capacity:";
+
+	// we initialize to the previous parse, which presumably worked
+	int num_bank_capacities = num_banks != nullptr ? *num_banks : 0;
+
+	if (optional_string(default_banks_str)) {
+		// get weapon list
+			stuff_int_list(bank_default_weapons, sip->max_tertiary_banks, WEAPON_LIST_TYPE);
+		*num_banks = (int)bank_default_weapons.size();
+	}
+
+	if (optional_string(bank_capacities_str)) {
+		// get capacity list
+		stuff_int_list(bank_capacities, sip->max_tertiary_banks, RAW_INTEGER_TYPE);
+			num_bank_capacities = bank_capacities.size();
+	}
+
+	// num_banks can be null if we're parsing weapons for a turret
+	if ((num_banks != nullptr) && (*num_banks != num_bank_capacities)) {
+			Warning(LOCATION,
+				"Ship class '%s' has %d tertiary banks, but %d tertiary capacities... fix this!!",
+				sip->name,
+				*num_banks,
+				num_bank_capacities);
 	}
 }
 
@@ -3668,8 +3720,8 @@ static void parse_ship_values(ship_info* sip, const bool is_template, const bool
 	}
 
 	// Set the weapons filter used in weapons loadout (for primary weapons)
-	parse_allowed_weapons(sip, true, false, first_time);
-	parse_allowed_weapons(sip, true, true, first_time);
+	parse_allowed_weapons(sip, true, false, first_time, false);
+	parse_allowed_weapons(sip, true, true, first_time, false);
 
 	// Get primary bank weapons
 	parse_weapon_bank(sip, true, &sip->num_primary_banks, sip->primary_bank_weapons, sip->primary_bank_ammo_capacity);
@@ -3681,8 +3733,8 @@ static void parse_ship_values(ship_info* sip, const bool is_template, const bool
 	}
 
 	// Set the weapons filter used in weapons loadout (for secondary weapons)
-	parse_allowed_weapons(sip, false, false, first_time);
-	parse_allowed_weapons(sip, false, true, first_time);
+	parse_allowed_weapons(sip, false, false, first_time, false);
+	parse_allowed_weapons(sip, false, true, first_time, false);
 
 	// Get secondary bank weapons
 	parse_weapon_bank(sip, false, &sip->num_secondary_banks, sip->secondary_bank_weapons, sip->secondary_bank_ammo_capacity);
@@ -3692,6 +3744,13 @@ static void parse_ship_values(ship_info* sip, const bool is_template, const bool
 		sip->flags.set(Ship::Info_Flags::Draw_weapon_models);
 		stuff_bool_list(sip->draw_secondary_models, sip->num_secondary_banks);
 	}
+	sip->max_tertiary_banks = model_get(sip->model_num)->n_tertiaries;
+		// Get tertiary bank weapons
+		parse_allowed_weapons(sip, false, false, first_time, true);
+		parse_tertiary_bank(sip,
+			&sip->num_tertiary_banks,
+			sip->tertiary_bank_weapons,
+			sip->tertiary_bank_ammo_capacity);
 
 	if (optional_string("$Ship Recoil Modifier:")){
 		stuff_float(&sip->ship_recoil_modifier);
@@ -5052,6 +5111,11 @@ static void parse_ship_values(ship_info* sip, const bool is_template, const bool
 					sp->secondary_bank_capacity[i] = 0;
 				}
 
+				sp->tertiary_banks.clear();
+				for (size_t i = 0; i < sip->max_tertiary_banks; i++) {		
+					sp->tertiary_banks.push_back(-1);
+				}
+
 				sp->engine_wash_pointer = NULL;
 				
 				sp->alive_snd = gamesnd_id();
@@ -5137,6 +5201,8 @@ static void parse_ship_values(ship_info* sip, const bool is_template, const bool
 
 			//	Get secondary bank weapons
 			parse_weapon_bank(sip, false, NULL, sp->secondary_banks, sp->secondary_bank_capacity);
+
+			parse_tertiary_bank(sip, nullptr, sp->tertiary_banks, sp->tertiary_bank_capacity);
 
 			// Get optional engine wake info
 			if (optional_string("$Engine Wash:")) {
@@ -6810,7 +6876,7 @@ void ship_weapon::clear()
     previous_primary_bank = 0;
     previous_secondary_bank = 0;
 
-    next_tertiary_fire_stamp = timestamp(0);
+    next_tertiary_fire_stamp.clear();
 
     for (int i = 0; i < MAX_SHIP_PRIMARY_BANKS; i++)
     {
@@ -6864,11 +6930,11 @@ void ship_weapon::clear()
         burst_counter[i + MAX_SHIP_PRIMARY_BANKS] = 0;
         external_model_fp_counter[i + MAX_SHIP_PRIMARY_BANKS] = 0;
     }
-
-    tertiary_bank_ammo = 0;
-    tertiary_bank_start_ammo = 0;
-    tertiary_bank_capacity = 0;
-    tertiary_bank_rearm_time = timestamp(0);
+	tertiary_bank_weapons.clear();
+    tertiary_bank_ammo.clear();
+	tertiary_bank_start_ammo.clear();
+	tertiary_bank_capacity.clear();
+	tertiary_bank_rearm_time.clear();
 
     detonate_weapon_time = 0;
     ai_class = 0;
@@ -7037,7 +7103,10 @@ static void ship_set(int ship_index, int objnum, int ship_type)
 		swp->current_secondary_bank = -1;
 		swp->previous_secondary_bank = -1;
 	}
-	swp->current_tertiary_bank = -1;
+	if (sip->num_tertiary_banks == 0 || swp->tertiary_bank_weapons[0] < 0) {
+		swp->current_tertiary_bank = -1;
+		swp->previous_tertiary_bank = -1;
+	}
 
 	swp->ai_class = Ai_info[shipp->ai_index].ai_class;
 
@@ -7533,6 +7602,17 @@ static int subsys_set(int objnum, int ignore_subsys_info)
 				ship_system->weapons.secondary_bank_capacity[j] = model_system->secondary_bank_capacity[k];
 				ship_system->weapons.next_secondary_fire_stamp[j] = timestamp(0);
 				ship_system->weapons.last_secondary_fire_stamp[j++] = -1;
+			}
+			ship_system->weapons.burst_counter[k + MAX_SHIP_PRIMARY_BANKS] = 0;
+		}
+		int max = Ship_info[shipp->ship_info_index].max_tertiary_banks;
+		j = 0;
+		for (k = 0; k < max; k++) {
+			if (model_system->tertiary_banks[k] != -1) {
+				ship_system->weapons.tertiary_bank_weapons[j] = model_system->tertiary_banks[k];
+				ship_system->weapons.tertiary_bank_capacity[j] = model_system->tertiary_bank_capacity[k];
+				ship_system->weapons.next_tertiary_fire_stamp[j] = timestamp(0);
+				ship_system->weapons.last_tertiary_fire_stamp[j++] = -1;
 			}
 			ship_system->weapons.burst_counter[k + MAX_SHIP_PRIMARY_BANKS] = 0;
 		}
@@ -10313,6 +10393,7 @@ static void ship_set_default_weapons(ship *shipp, ship_info *sip)
 		Warning(LOCATION, "There are %d secondary banks specified for %s,\n but only %d secondary banks in the model.\n", sip->num_secondary_banks, sip->name, pm->n_missiles);
 		sip->num_secondary_banks = pm->n_missiles;
 	}
+
 
 	// added ballistic primary support - Goober5000
 	swp->num_primary_banks = sip->num_primary_banks;
