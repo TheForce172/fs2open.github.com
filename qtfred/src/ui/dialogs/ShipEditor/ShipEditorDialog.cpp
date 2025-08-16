@@ -10,6 +10,7 @@
 #include <ui/util/SignalBlockers.h>
 
 #include <QCloseEvent>
+#include <QVariant>
 
 namespace fso {
 namespace fred {
@@ -300,7 +301,8 @@ void ShipEditorDialog::updateColumnOne()
 			ui->callsignCombo->addItem("<none>");
 			ui->callsignCombo->setEnabled(true);
 			for (j = 0; j < Mission_callsign_count; j++) {
-				ui->callsignCombo->addItem(Mission_callsigns[j], QVariant(Mission_callsigns[j]));
+				QString sign = Mission_callsigns[j];
+				ui->callsignCombo->addItem(Mission_callsigns[j], QVariant(sign));
 			}
 
 			if (ui->callsignCombo->findText(QString(callsign.c_str()))) {

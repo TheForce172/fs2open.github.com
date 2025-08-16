@@ -47,10 +47,10 @@ namespace dialogs {
 			this,
 			&ReinforcementsDialog::onReinforcementItemChanged);
 
-		connect(ui->chosenShipsList,
+		/* connect(ui->chosenShipsList,
 			static_cast<void (QListWidget::*)(QDropEvent*)>(&QListWidget::dropEvent),
 			this,
-			&ReinforcementsDialog::onReinforcementItemChanged);
+			&ReinforcementsDialog::onReinforcementItemChanged);*/
 
 		connect(ui->actionAddShip,
 			&QPushButton::clicked,
