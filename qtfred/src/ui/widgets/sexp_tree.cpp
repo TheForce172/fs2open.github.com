@@ -5779,15 +5779,15 @@ std::unique_ptr<QMenu> sexp_tree::buildContextMenu(QTreeWidgetItem* h) {
 	std::unique_ptr<QMenu> popup_menu(new QMenu(tr("Edit SEXP tree")));
 
 	auto delete_act =
-		popup_menu->addAction(tr("&Delete Item"), this, [this]() { deleteActionHandler(); }, QKeySequence::Delete);
+		popup_menu->addAction(tr("&Delete Item"), QKeySequence::Delete, this, [this]() { deleteActionHandler(); });
 	auto edit_data_act = popup_menu->addAction(tr("&Edit Data"), this, [this]() { editDataActionHandler(); });
 	popup_menu->addAction(tr("Expand All"), this, [this]() { expand_branch(currentItem()); });
 
 	popup_menu->addSection(tr("Copy operations"));
-	auto cut_act = popup_menu->addAction(tr("Cut"), this, [this]() { cutActionHandler(); }, QKeySequence::Cut);
+	auto cut_act = popup_menu->addAction(tr("Cut"), QKeySequence::Cut, this, [this]() { cutActionHandler(); });
 	cut_act->setEnabled(false);
-	auto copy_act = popup_menu->addAction(tr("Copy"), this, [this]() { copyActionHandler(); }, QKeySequence::Copy);
-	auto paste_act = popup_menu->addAction(tr("Paste"), this, [this]() { pasteActionHandler(); }, QKeySequence::Paste);
+	auto copy_act = popup_menu->addAction(tr("Copy"), QKeySequence::Copy, this, [this]() { copyActionHandler(); });
+	auto paste_act = popup_menu->addAction(tr("Paste"), QKeySequence::Paste, this, [this]() { pasteActionHandler(); });
 	paste_act->setEnabled(false);
 
 	popup_menu->addSection(tr("Add"));
