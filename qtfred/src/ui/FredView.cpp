@@ -163,7 +163,9 @@ FredView::FredView(QWidget* parent) : QMainWindow(parent), ui(new Ui::FredView()
 	bindThemeIcon(ui->actionUnhide_Layers, QStringLiteral("unhide"));
 }
 
-FredView::~FredView() {
+FredView::~FredView()
+{
+	disconnect(_browserPanel, &QDockWidget::visibilityChanged, this, nullptr);
 }
 
 void FredView::setEditor(Editor* editor, EditorViewport* viewport) {
@@ -269,6 +271,9 @@ void FredView::setEditor(Editor* editor, EditorViewport* viewport) {
 	ui->actionSelectionList->setToolTip(tr("Toggle Scene Browser (H)"));
 	ui->actionSelectionList->setChecked(_browserPanel->isVisible());
 	connect(_browserPanel, &QDockWidget::visibilityChanged, this, [this](bool visible) {
+		if (!ui || !ui->actionSelectionList) {
+			return;
+		}
 		QSignalBlocker blocker(ui->actionSelectionList);
 		ui->actionSelectionList->setChecked(visible);
 	});
@@ -2166,7 +2171,8 @@ void FredView::closeEvent(QCloseEvent* event) {
 		event->ignore();
 		return;
 	}
-
+	disconnect();
+	shutdown();
 	QMainWindow::closeEvent(event);
 }
 void FredView::windowActivated() {
