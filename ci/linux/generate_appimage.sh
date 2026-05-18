@@ -12,7 +12,8 @@ appimagetool -n "$INSTALL_FOLDER/Freespace2" "$INSTALL_FOLDER/$FILENAME"
 chmod +x "$INSTALL_FOLDER/$FILENAME"
 
 # Maybe install qtFRED targets
-if [ -f qtfred/cmake_install.cmake ]; then
+if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
+if [ "$ENABLE_QTFRED" = "ON" ]; then
 	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=Unspecified -P cmake_install.cmake
 	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=qtFRED -P cmake_install.cmake
 
@@ -20,6 +21,7 @@ if [ -f qtfred/cmake_install.cmake ]; then
 	FILENAME="$(find $INSTALL_FOLDER/qtFRED/bin -iname 'qtfred_*' -type f -printf "%f\n").AppImage"
 	appimagetool -n "$INSTALL_FOLDER/qtFRED" "$INSTALL_FOLDER/$FILENAME"
 	chmod +x "$INSTALL_FOLDER/$FILENAME"
+fi
 fi
 
 ls -al $INSTALL_FOLDER
