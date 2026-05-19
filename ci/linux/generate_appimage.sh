@@ -35,18 +35,24 @@ chmod +x "$INSTALL_FOLDER/$FILENAME"
 
 # Maybe install qtFRED targets
 if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
-if [ "$ENABLE_QTFRED" = "ON" ]; then
-	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=Unspecified -P cmake_install.cmake
-	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=qtFRED -P cmake_install.cmake
-	# We need to be a bit creative for determining the AppImage name since we don't want to hard-code the name
-	CLEANFILENAME=$(find "$INSTALL_FOLDER/qtFRED/bin" -iname 'qtfred_*' ! -iname '*help*' -type f -print -quit)
-	ls $INSTALL_FOLDER/qtFRED
-fi
-	FILENAME="$(find $INSTALL_FOLDER/qtFRED/bin -iname 'qtfred_*' ! -iname '*help*' -type f -printf "%f\n").AppImage"
-	./bin/linuxdeployqt "$INSTALL_FOLDER/qtFRED/bin/$CLEANFILENAME"
-	appimagetool -n "$INSTALL_FOLDER/qtFRED" "$INSTALL_FOLDER/$FILENAME"
-	chmod +x "$INSTALL_FOLDER/$FILENAME"
-fi
+	if [ "$ENABLE_QTFRED" = "ON" ]; then
+		cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=Unspecified -P cmake_install.cmake
+		cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=qtFRED -P cmake_install.cmake
+		# We need to be a bit creative for determining the AppImage name since we don't want to hard-code the name
+
+		TARGET_DIR="$INSTALL_FOLDER/qtFRED/bin"
+		BINARY_PATH=$(find "$TARGET_DIR" -type f -name "qtfred_*" -not -name "*help*" -print -quit)
+		CLEANFILENAME=$(basename "$BINARY_PATH")
+		FILENAME="${CLEANFILENAME}.AppImage"
+		if [ -z "$BINARY_PATH" ] || [ ! -f "$BINARY_PATH" ]; then
+    		echo "ERROR: linuxdeployqt target not found at $BINARY_PATH"
+    		exit 1
+		fi
+		#FILENAME="$(find $INSTALL_FOLDER/qtFRED/bin -iname 'qtfred_*' ! -iname '*help*' -type f -printf "%f\n").AppImage"
+		./bin/linuxdeployqt "$BINARY_PATH"
+		appimagetool -n "$INSTALL_FOLDER/qtFRED" "$INSTALL_FOLDER/$FILENAME"
+		chmod +x "$INSTALL_FOLDER/$FILENAME"
+	fi
 fi
 
 ls -al $INSTALL_FOLDER
