@@ -42,7 +42,7 @@ if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
 		cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=Unspecified -P cmake_install.cmake
 		cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=qtFRED -P cmake_install.cmake
 		# We need to be a bit creative for determining the AppImage name since we don't want to hard-code the name
-		export QMAKE=/usr/lib/x86_64-linux-gnu/qt5/bin/qmake
+		export QT_QPA_PLATFORM=offscreen
 		TARGET_DIR="$INSTALL_FOLDER/qtFRED/bin"
 		DESKTOP_PATH=$(find "$INSTALL_FOLDER/qtFRED" -name "*.desktop" -type f -print -quit)
 		BINARY_PATH=$(find "$TARGET_DIR" -type f -name "qtfred_*" -not -name "*help*" -print -quit)
