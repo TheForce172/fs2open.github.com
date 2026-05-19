@@ -41,6 +41,7 @@ if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
 		# We need to be a bit creative for determining the AppImage name since we don't want to hard-code the name
 
 		TARGET_DIR="$INSTALL_FOLDER/qtFRED/bin"
+		DESKTOP_PATH=$(find "$INSTALL_FOLDER/qtFRED" -name "*.desktop" -type f -print -quit)
 		BINARY_PATH=$(find "$TARGET_DIR" -type f -name "qtfred_*" -not -name "*help*" -print -quit)
 		CLEANFILENAME=$(basename "$BINARY_PATH")
 		FILENAME="${CLEANFILENAME}.AppImage"
@@ -49,7 +50,7 @@ if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
     		exit 1
 		fi
 		#FILENAME="$(find $INSTALL_FOLDER/qtFRED/bin -iname 'qtfred_*' ! -iname '*help*' -type f -printf "%f\n").AppImage"
-		./bin/linuxdeployqt "$BINARY_PATH"
+		./bin/linuxdeployqt "$DESKTOP_PATH"
 		appimagetool -n "$INSTALL_FOLDER/qtFRED" "$INSTALL_FOLDER/$FILENAME"
 		chmod +x "$INSTALL_FOLDER/$FILENAME"
 	fi
