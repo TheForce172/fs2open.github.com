@@ -19,7 +19,8 @@ if [ ! -x ./bin/linuxdeployqt ]; then
 
 	wget -O ./bin/linuxdeploy "$APPIMAGE_TOOL_URL" || { echo "ERROR! Failed to get linuxdeployqt!" && exit 1; }
 	wget -O ./bin/linuxdeploy-plugin-qt "$APPIMAGE_TOOL_URL" || { echo "ERROR! Failed to get linuxdeployqt!" && exit 1; }
-	chmod +x ./bin/linuxdeployqt
+	chmod +x ./bin/linuxdeploy
+	chmod +x ./bin/linuxdeploy-plugin-qt
 fi
 
 # This shouldn't be needed with newer runtimes, but they still generate an
