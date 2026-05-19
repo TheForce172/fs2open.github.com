@@ -69,7 +69,7 @@ jobs:
         working-directory: ./build
         env:
           ARCH: ${{ matrix.arch }}
-          QTDIR: Qt5_DIR
+          QMAKE: /qt/${{ env.QT_VERSION }}/gcc_64/bin/qmake
           CONFIGURATION: ${{ matrix.configuration }}
           ENABLE_QTFRED: ON
         run: $GITHUB_WORKSPACE/ci/linux/generate_appimage.sh $GITHUB_WORKSPACE/build/install

@@ -14,9 +14,11 @@ fi
 
 # install newest appimagetool if it's not already available
 if [ ! -x ./bin/linuxdeployqt ]; then
-	APPIMAGE_TOOL_URL="https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-$(uname -m).AppImage"
+	APPIMAGE_TOOL_URL="https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$(uname -m).AppImage"
+	PLUGIN_TOOL_URL="https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-$(uname -m).AppImage"
 
-	wget -O ./bin/linuxdeployqt "$APPIMAGE_TOOL_URL" || { echo "ERROR! Failed to get linuxdeployqt!" && exit 1; }
+	wget -O ./bin/linuxdeploy "$APPIMAGE_TOOL_URL" || { echo "ERROR! Failed to get linuxdeployqt!" && exit 1; }
+	wget -O ./bin/linuxdeploy-plugin-qt "$APPIMAGE_TOOL_URL" || { echo "ERROR! Failed to get linuxdeployqt!" && exit 1; }
 	chmod +x ./bin/linuxdeployqt
 fi
 
@@ -39,7 +41,7 @@ if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
 		cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=Unspecified -P cmake_install.cmake
 		cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=qtFRED -P cmake_install.cmake
 		# We need to be a bit creative for determining the AppImage name since we don't want to hard-code the name
-
+		export QMAKE=/usr/lib/x86_64-linux-gnu/qt5/bin/qmake
 		TARGET_DIR="$INSTALL_FOLDER/qtFRED/bin"
 		DESKTOP_PATH=$(find "$INSTALL_FOLDER/qtFRED" -name "*.desktop" -type f -print -quit)
 		BINARY_PATH=$(find "$TARGET_DIR" -type f -name "qtfred_*" -not -name "*help*" -print -quit)
@@ -50,7 +52,7 @@ if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
     		exit 1
 		fi
 		#FILENAME="$(find $INSTALL_FOLDER/qtFRED/bin -iname 'qtfred_*' ! -iname '*help*' -type f -printf "%f\n").AppImage"
-		./bin/linuxdeployqt "$DESKTOP_PATH"
+		./bin/linuxdeploy --appdir "$INSTALL_FOLDER/qtFRED" --plugin qt --executable "$BINARY_PATH"
 		appimagetool -n "$INSTALL_FOLDER/qtFRED" "$INSTALL_FOLDER/$FILENAME"
 		chmod +x "$INSTALL_FOLDER/$FILENAME"
 	fi
