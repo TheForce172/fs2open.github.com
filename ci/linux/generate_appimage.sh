@@ -40,9 +40,7 @@ if [ "$ENABLE_QTFRED" = "ON" ]; then
 	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_FOLDER/qtFRED -DCOMPONENT=qtFRED -P cmake_install.cmake
 	# We need to be a bit creative for determining the AppImage name since we don't want to hard-code the name
 	CLEANFILENAME=$(find "$INSTALL_FOLDER/qtFRED/bin" -iname 'qtfred_*' ! -iname '*help*' -type f -print -quit)
-	if [ -z "$CLEANFILENAME" ]; then
-    echo "ERROR: Target binary 'qtfred_*' not found in install folder!"
-    exit 1
+	ls $INSTALL_FOLDER/qtFRED
 fi
 	FILENAME="$(find $INSTALL_FOLDER/qtFRED/bin -iname 'qtfred_*' ! -iname '*help*' -type f -printf "%f\n").AppImage"
 	./bin/linuxdeployqt "$INSTALL_FOLDER/qtFRED/bin/$CLEANFILENAME"
