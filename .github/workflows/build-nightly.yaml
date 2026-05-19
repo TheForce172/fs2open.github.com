@@ -68,6 +68,7 @@ jobs:
       - name: Generate AppImage
         working-directory: ./build
         env:
+          ARCH: ${{ matrix.arch }}
           QTDIR: Qt5_DIR
           CONFIGURATION: ${{ matrix.configuration }}
           ENABLE_QTFRED: ON
