@@ -55,7 +55,7 @@ if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
     		exit 1
 		fi
 		#FILENAME="$(find $INSTALL_FOLDER/qtFRED/bin -iname 'qtfred_*' ! -iname '*help*' -type f -printf "%f\n").AppImage"
-		./bin/linuxdeploy --appdir "$INSTALL_FOLDER/qtFRED" --plugin qt
+		./bin/linuxdeploy --appdir "$INSTALL_FOLDER/qtFRED" --plugin qt --executable "$BINARY_PATHY"
 		appimagetool -n "$INSTALL_FOLDER/qtFRED" "$INSTALL_FOLDER/$FILENAME"
 		chmod +x "$INSTALL_FOLDER/$FILENAME"
 	fi
