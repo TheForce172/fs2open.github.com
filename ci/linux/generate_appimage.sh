@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+export LD_LIBRARY_PATH=$(pwd)/bin/lib:$LD_LIBRARY_PATH
 INSTALL_FOLDER=$1
 # safety check
 if [ ! -d bin -o ! -f cmake_install.cmake ]; then
