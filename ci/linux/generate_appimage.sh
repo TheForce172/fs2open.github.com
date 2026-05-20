@@ -18,14 +18,11 @@ if [ ! -x ./bin/linuxdeployqt ]; then
 	PLUGIN_TOOL_URL="https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-$(uname -m).AppImage"
 
 	wget -O ./bin/linuxdeploy "$APPIMAGE_TOOL_URL" || { echo "ERROR! Failed to get linuxdeployqt!" && exit 1; }
-	wget -O ./bin/linuxdeploy-plugin-qt "$APPIMAGE_TOOL_URL" || { echo "ERROR! Failed to get linuxdeployqt!" && exit 1; }
+	wget -O ./bin/linuxdeploy-plugin-qt "$PLUGIN_TOOL_URL" || { echo "ERROR! Failed to get linuxdeployqt!" && exit 1; }
 	chmod +x ./bin/linuxdeploy
 	chmod +x ./bin/linuxdeploy-plugin-qt
 
-	./linuxdeploy --appimage-extract
-	./linuxdeploy-plugin-qt --appimage-extract
-	mkdir -p squashfs-root/usr/bin/
-	cp linuxdeploy-plugin-qt squashfs-root/usr/bin/linuxdeploy-plugin-qt
+	
 fi
 
 # This shouldn't be needed with newer runtimes, but they still generate an
@@ -58,7 +55,7 @@ if [[ "$RUNNER_ARCH" != "ARM" && "$RUNNER_ARCH" != "ARM64" ]]; then
     		exit 1
 		fi
 		#FILENAME="$(find $INSTALL_FOLDER/qtFRED/bin -iname 'qtfred_*' ! -iname '*help*' -type f -printf "%f\n").AppImage"
-		./squashfs-root/AppRun --appdir "$INSTALL_FOLDER/qtFRED" --plugin qt
+		./bin/linuxdeploy --appdir "$INSTALL_FOLDER/qtFRED" --plugin qt
 		appimagetool -n "$INSTALL_FOLDER/qtFRED" "$INSTALL_FOLDER/$FILENAME"
 		chmod +x "$INSTALL_FOLDER/$FILENAME"
 	fi
