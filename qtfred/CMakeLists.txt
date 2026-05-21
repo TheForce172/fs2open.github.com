@@ -5,10 +5,21 @@ project(qtfred VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-SET(QT6_INSTALL_ROOT "" CACHE PATH
-"The path to the Qt6 installation root. May be necessary on windows if the standard find_package fails to find the Qt installation.")
-list(APPEND CMAKE_PREFIX_PATH "${QT6_INSTALL_ROOT}")
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGL Help) 
+option(QT_USE_PRECOMPILED "Use precompiled version of Qt. If disabled the system libraries will be used." OFF)
+
+if(QT_USE_PRECOMPILED)
+    get_prebuilt_path(PREBUILT_PATH)
+    set(QT6_INSTALL_ROOT "${PREBUILT_PATH}/Qt6")
+else()
+    SET(QT6_INSTALL_ROOT "" CACHE PATH
+        "The path to the Qt6 installation root. May be necessary on windows if the standard find_package fails to find the Qt installation.")
+endif()
+
+if(QT6_INSTALL_ROOT)
+    list(PREPEND CMAKE_PREFIX_PATH "${QT6_INSTALL_ROOT}")
+endif()
+
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGL Help)
 include(source_groups.cmake)
 qt_standard_project_setup()
 add_compile_definitions(QT_DISABLE_DEPRECATED_UP_TO=0x050F00)
@@ -16,13 +27,13 @@ INCLUDE(InstallRequiredSystemLibraries)
 qt6_wrap_ui(QTFRED_UI_GENERATED ${files_UI})
 source_group("UI\\Generated"            FILES ${QTFRED_UI_GENERATED})
 qt_add_executable(qtfred
-        ${source_files}
+    ${EXE_GUI_TYPE}
+    ${source_files}
     ${QTFRED_UI_GENERATED}
 )
 set_target_properties(qtfred PROPERTIES
         AUTORCC TRUE
-        AUTOUIC FALSE
-        WIN32_EXECUTABLE TRUE)
+        AUTOUIC FALSE)
 set_target_properties(qtfred PROPERTIES OUTPUT_NAME "qtfred_${FSO_BINARY_SUFFIX}")
 get_target_property(QT_PLUGINS_DIR Qt6::Core QT_PLUGINS_DIR)
 if(MSVC AND QT_PLUGINS_DIR)
@@ -67,12 +78,16 @@ execute_process(
     OUTPUT_VARIABLE _QTFRED_QT_BINS
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(
+    COMMAND "${_QTFRED_QMAKE}" -query QT_INSTALL_LIBEXECS
+    OUTPUT_VARIABLE _QTFRED_QT_LIBEXECS
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(
     COMMAND "${_QTFRED_QMAKE}" -query QT_INSTALL_LIBS
     OUTPUT_VARIABLE _QTFRED_QT_LIBS
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 find_program(QHELPGENERATOR_EXECUTABLE
     NAMES qhelpgenerator
-    HINTS "${_QTFRED_QT_BINS}"
+    HINTS "${_QTFRED_QT_BINS}" "${_QTFRED_QT_LIBEXECS}"
     REQUIRED)
 
 set(QTFRED_HELP_QHP  "${CMAKE_CURRENT_SOURCE_DIR}/help-src/doc/qtfred.qhp")
@@ -138,13 +153,13 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/help-src"
 
 add_custom_command(TARGET qtfred_help POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        "$<TARGET_FILE_DIR:qtfred>/help"
+        "$<TARGET_FILE_DIR:qtfred>/$<$<BOOL:${PLATFORM_MAC}>:../Resources/>help"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${QTFRED_HELP_QCH}"
-        "$<TARGET_FILE_DIR:qtfred>/help/qtfred_help.qch"
+        "$<TARGET_FILE_DIR:qtfred>/$<$<BOOL:${PLATFORM_MAC}>:../Resources/>help/qtfred_help.qch"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${QTFRED_HELP_QHC}"
-        "$<TARGET_FILE_DIR:qtfred>/help/qtfred_help.qhc"
+        "$<TARGET_FILE_DIR:qtfred>/$<$<BOOL:${PLATFORM_MAC}>:../Resources/>help/qtfred_help.qhc"
     VERBATIM)
 
 install(FILES "${QTFRED_HELP_QCH}" "${QTFRED_HELP_QHC}"
@@ -154,34 +169,39 @@ install(FILES "${QTFRED_HELP_QCH}" "${QTFRED_HELP_QHC}"
 
 enable_clang_tidy(qtfred)
 COPY_FILES_TO_TARGET(qtfred)
-if(WIN32)
+
+if(PLATFORM_WINDOWS)
     get_target_property(QMAKE_EXE Qt6::qmake IMPORTED_LOCATION)
     get_filename_component(QT_BIN_DIR ${_QTFRED_QMAKE} DIRECTORY)
     message(STATUS "Qt bin dir: ${QT_BIN_DIR}")
-message(STATUS "qmake path: ${QMAKE_EXE}")
-    find_program(WINDEPLOYQT_EXECUTABLE
-    NAMES windeployqt6 windeployqt
-    HINTS "${QT_BIN_DIR}"
-    REQUIRED
-)
-if(NOT WINDEPLOYQT_EXECUTABLE)
-    message(WARNING "windeployqt not found in '${QT_BIN_DIR}' — Qt DLLs will not be deployed")
-else()
-    message(STATUS "Found windeployqt: ${WINDEPLOYQT_EXECUTABLE}")
-endif()
-add_custom_command(TARGET qtfred POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Target file is: $<TARGET_FILE:qtfred>"
-    COMMENT "Debug: checking target file path"
-)
-add_custom_command(TARGET qtfred POST_BUILD
-    COMMAND "${WINDEPLOYQT_EXECUTABLE}"
-        --qthelp
-        $<$<OR:$<CONFIG:Debug>,$<CONFIG:FastDebug>>:--debug>
-        $<$<CONFIG:Release>:--release>
-        --dir "$<TARGET_FILE_DIR:qtfred>"
-        $<TARGET_FILE:qtfred>
-    COMMENT "Running windeployqt (with Qt Help support)..."
-)
+    message(STATUS "qmake path: ${QMAKE_EXE}")
+
+    find_program(DEPLOYQT_EXECUTABLE
+        NAMES windeployqt6 windeployqt
+        HINTS "${QT_BIN_DIR}"
+        REQUIRED
+    )
+
+    if(NOT DEPLOYQT_EXECUTABLE)
+        message(WARNING "windeployqt not found in '${QT_BIN_DIR}' — Qt DLLs will not be deployed")
+    else()
+        message(STATUS "Found windeployqt: ${DEPLOYQT_EXECUTABLE}")
+    endif()
+
+    add_custom_command(TARGET qtfred POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "Target file is: $<TARGET_FILE:qtfred>"
+        COMMENT "Debug: checking target file path"
+    )
+
+    add_custom_command(TARGET qtfred POST_BUILD
+        COMMAND "${DEPLOYQT_EXECUTABLE}"
+            --qthelp
+            $<$<OR:$<CONFIG:Debug>,$<CONFIG:FastDebug>>:--debug>
+            $<$<CONFIG:Release>:--release>
+            --dir "$<TARGET_FILE_DIR:qtfred>"
+            $<TARGET_FILE:qtfred>
+        COMMENT "Running windeployqt (with Qt Help support)..."
+    )
 
     install(
         DIRECTORY "$<TARGET_FILE_DIR:qtfred>/"
@@ -192,7 +212,40 @@ add_custom_command(TARGET qtfred POST_BUILD
             PATTERN "qsqlite*.dll"
             PATTERN "qwindows*.dll"
             PATTERN "*.dll"
-)
+    )
+elseif(PLATFORM_MAC)
+    # Handling of mac resources
+    set(subpath resources/mac)
+
+    set_target_properties(qtfred PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/${subpath}/Info.plist.in")
+    set_target_properties(qtfred PROPERTIES MACOSX_BUNDLE_ICON_FILE "fred_icon")
+    set_target_properties(qtfred PROPERTIES MACOSX_BUNDLE_LONG_VERSION_STRING "${FSO_FULL_VERSION_STRING}")
+    set_target_properties(qtfred PROPERTIES MACOSX_BUNDLE_SHORT_VERSION_STRING "${FSO_PRODUCT_VERSION_STRING}")
+    set_target_properties(qtfred PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "qtFRED")
+    set_target_properties(qtfred PROPERTIES MACOSX_DEPLOYMENT_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    set_target_properties(qtfred PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "us.indiegames.scp.qtFRED")
+    set_target_properties(qtfred PROPERTIES XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Manual")
+    set_target_properties(qtfred PROPERTIES XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "")
+
+    # Copy everything from the Resources directory
+    add_custom_command(TARGET qtfred POST_BUILD
+        COMMAND cp -a "${CMAKE_CURRENT_SOURCE_DIR}/${subpath}/Resources/*" "$<TARGET_FILE_DIR:qtfred>/../Resources"
+        COMMENT "Copying resources into bundle..."
+    )
+
+    # fix up Qt libs
+    find_program(DEPLOYQT_EXECUTABLE
+         NAMES macdeployqt6 macdeployqt
+         HINTS "${_QTFRED_QT_BINS}"
+         REQUIRED
+    )
+
+    add_custom_command(TARGET qtfred POST_BUILD
+        COMMAND "${DEPLOYQT_EXECUTABLE}"
+            "$<TARGET_BUNDLE_DIR:qtfred>"
+            -codesign=-
+        COMMENT "Running macdeployqt..."
+    )
 elseif(FSO_BUILD_APPIMAGE)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AppRun.in" "${CMAKE_CURRENT_BINARY_DIR}/AppRun.gen" @ONLY)
     file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/AppRun-$<CONFIG>"
